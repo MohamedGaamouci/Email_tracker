@@ -3,7 +3,6 @@ import csv
 import os
 from datetime import datetime
 from flask_cors import CORS
-port = int(os.environ.get("PORT", 5000))  # default to 5000 if PORT is not set
 
 
 app = Flask(__name__)
@@ -50,10 +49,26 @@ def track_cta():
 
 
 def log_event(campaign, email, event_type):
+    # First check if the event already exists
+    if os.path.exists(CSV_FILE):
+        with open(CSV_FILE, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if (
+                    row["campaign"] == campaign and
+                    row["email"] == email and
+                    row["type"] == event_type
+                ):
+                    print(
+                        f"⚠️ Duplicate {event_type} ignored for {email} - {campaign}")
+                    return  # Already logged
+
+    # If not found, log the new event
     with open(CSV_FILE, "a", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([campaign, email, event_type,
                         datetime.utcnow().isoformat()])
+        print(f"✅ Logged {event_type}: {email} - {campaign}")
 
 
 @app.route("/api/stats")
@@ -99,8 +114,7 @@ def api_stats():
 
 
 if __name__ == "__main__":
-    # app.run(debug=True)
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
 
 
 # from PIL import Image
