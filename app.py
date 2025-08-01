@@ -35,7 +35,7 @@ def track_pixel():
 
     print(f"📩 Open tracked: {email} - {campaign}")
 
-    return send_file(r'C:\Users\n\Desktop\EasyBooking Logo.png', mimetype='image/png')
+    return send_file(r'pixel.png', mimetype='image/png')
 
 
 @app.route("/cta")
