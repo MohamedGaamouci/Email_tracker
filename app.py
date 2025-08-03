@@ -1,8 +1,9 @@
 from flask import Flask, request, send_file, redirect, jsonify, make_response
-import csv
 import os
 from datetime import datetime
 from flask_cors import CORS
+from database import MySQLTracker
+port = int(os.environ.get("PORT", 5000))  # default to 5000 if PORT is not set
 
 
 app = Flask(__name__)
@@ -13,11 +14,8 @@ print("Server running...")
 
 CSV_FILE = "events.csv"
 
-# Ensure CSV file exists
-if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["campaign", "email", "type", "timestamp"])  # header
+
+tracker = MySQLTracker()  # create the tracker instance
 
 
 @app.route("/")
@@ -31,75 +29,32 @@ def track_pixel():
     email = request.args.get('email')
 
     if campaign and email:
-        log_event(campaign, email, "open")
+        tracker.log_event(campaign, email, "open")
 
     print(f"📩 Open tracked: {email} - {campaign}")
-
-    return send_file(r'C:\Users\n\Desktop\EasyBooking Logo.png', mimetype='image/png')
+    return send_file('pixel.png', mimetype='image/png')
 
 
 @app.route("/cta")
 def track_cta():
     campaign = request.args.get("campaign")
     email = request.args.get("email")
-    redirect_url = request.args.get("target", "https://easybooking.com")
+    target_url = request.args.get("target", "https://easybooking.com")
+
     if campaign and email:
-        log_event(campaign, email, "click")
-    return redirect(redirect_url)
+        tracker.log_event(campaign, email, "click", target_url)
 
-
-def log_event(campaign, email, event_type):
-    with open(CSV_FILE, "a", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow([campaign, email, event_type,
-                        datetime.utcnow().isoformat()])
+    return redirect(target_url)
 
 
 @app.route("/api/stats")
 def api_stats():
-    import collections
-
-    opens = 0
-    clicks = 0
-    campaigns = set()
-    recent_data = collections.defaultdict(
-        lambda: {"sent": 0, "open": 0, "click": 0})
-
-    with open(CSV_FILE, "r") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            campaigns.add(row["campaign"])
-            recent_data[row["campaign"]]["sent"] += 1
-            if row["type"] == "open":
-                opens += 1
-                recent_data[row["campaign"]]["open"] += 1
-            elif row["type"] == "click":
-                clicks += 1
-                recent_data[row["campaign"]]["click"] += 1
-
-    # Sort and keep only 5 recent campaigns (based on volume, for simplicity)
-    sorted_campaigns = sorted(
-        recent_data.items(), key=lambda x: x[1]["sent"], reverse=True)[:5]
-
-    return jsonify({
-        "emails_opened": opens,
-        "emails_clicked": clicks,
-        "total_campaigns": len(campaigns),
-        "recent_campaigns": [
-            {
-                "subject": name,
-                "sent": stats["sent"],
-                "opened": stats["open"],
-                "clicked": stats["click"]
-            }
-            for name, stats in sorted_campaigns
-        ]
-    })
+    return jsonify(tracker.get_stats())
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
-
+    # app.run(debug=True)
+    app.run(host="0.0.0.0", port=port)
 
 # from PIL import Image
 
