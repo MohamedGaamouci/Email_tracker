@@ -3,17 +3,14 @@
 import pymysql
 from datetime import datetime
 import os
-from dotenv import load_dotenv
 
 
 class MySQLTracker:
     def __init__(self):
-        load_dotenv()
-        password = os.getenv("DB_PASSWORD"),
         self.config = {
             "host": "mysql-3aa52e18-gaamoucimohamed-ce85.d.aivencloud.com",
             "user": "avnadmin",
-            "password": password,
+            "password": "AVNS_EvkT561hhvQyup2qsnX",
             "db": "defaultdb",
             "port": 26870,
             "charset": "utf8mb4",
@@ -114,3 +111,4 @@ class MySQLTracker:
                 }
         finally:
             connection.close()
+
